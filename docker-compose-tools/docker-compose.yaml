@@ -1,0 +1,57 @@
+version: '3'
+services:
+  nexus-repository:
+    image: sonatype/nexus3
+    container_name: nexus
+    ports:
+      - "8081:8081"
+    volumes:
+      - nexus-data:/nexus-data
+    restart: unless-stopped
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    hostname: 'gitlab.local'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+    ports:
+      - '80:80'       # Web interface
+      - '443:443'     # HTTPS (optional)
+      - '2224:22'     # SSH (Git over SSH)
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_data:/var/opt/gitlab
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    restart: always
+    ports:
+      - "8082:8080"   # Jenkins Web UI
+      - "50000:50000" # Jenkins agent port
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"  # optional: skip setup wizard
+
+  terraform:
+    image: hashicorp/terraform:1.8.4
+    container_name: terraform
+    working_dir: /workspace
+    volumes:
+      - ./terraform:/workspace                  # Mount your .tf files
+    entrypoint: [ "terraform" ]
+    stdin_open: true
+    tty: true
+
+volumes:
+  nexus-data:
+  awx_data:
+  db_data:
+  gitlab_config:
+  gitlab_data:
+  jenkins_home:
